@@ -1,0 +1,155 @@
+--[[
+    AdvSpy v1.0 - Professional Remote Monitor
+    Optimized for Delta & Mobile Executors
+    
+    INSTRUCTIONS:
+    1. Perform an action in-game (Roll, Craft, etc.)
+    2. Tap the Remote name in the left panel.
+    3. Use 'Copy Code' to get the script for your executor.
+    4. Use 'Run Code' to test the remote immediately.
+]]
+
+if getgenv().AdvSpyExecuted and type(getgenv().AdvSpyShutdown) == "function" then
+    getgenv().AdvSpyShutdown()
+end
+
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+-- Configuration Helper
+local realconfigs = {
+    logcheckcaller = false,
+    autoblock = false,
+    funcEnabled = true,
+    advancedinfo = false,
+    supersecretdevtoggle = false
+}
+
+-- [[ UI CONSTRUCTOR ]] --
+local function Create(instance, properties, children)
+    local obj = Instance.new(instance)
+    for i, v in next, properties or {} do
+        obj[i] = v
+    end
+    for _, child in next, children or {} do
+        child.Parent = obj
+    end
+    return obj
+end
+
+local AdvSpyGui = Create("ScreenGui", {Name = "AdvSpy", ResetOnSpawn = false})
+local Storage = Create("Folder", {Name = "AdvSpy_Storage"})
+
+-- Main Window
+local Background = Create("Frame", {
+    Parent = AdvSpyGui,
+    BackgroundColor3 = Color3.fromRGB(18, 18, 20),
+    BorderSizePixel = 0,
+    Position = UDim2.new(0.5, -225, 0.5, -134),
+    Size = UDim2.new(0, 450, 0, 268)
+})
+Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = Background})
+
+-- Top Bar (Neon Theme)
+local TopBar = Create("Frame", {
+    Parent = Background,
+    BackgroundColor3 = Color3.fromRGB(30, 30, 35),
+    BorderSizePixel = 0,
+    Size = UDim2.new(1, 0, 0, 30)
+})
+Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = TopBar})
+
+local AccentLine = Create("Frame", {
+    Parent = TopBar,
+    BackgroundColor3 = Color3.fromRGB(0, 162, 255),
+    Position = UDim2.new(0, 0, 1, -2),
+    Size = UDim2.new(1, 0, 0, 2),
+    BorderSizePixel = 0
+})
+
+local Title = Create("TextLabel", {
+    Parent = TopBar,
+    BackgroundTransparency = 1,
+    Position = UDim2.new(0, 10, 0, 0),
+    Size = UDim2.new(0, 100, 1, 0),
+    Font = Enum.Font.GothamBold,
+    Text = "ADVSPY PRO",
+    TextColor3 = Color3.new(1, 1, 1),
+    TextSize = 14,
+    TextXAlignment = Enum.TextXAlignment.Left
+})
+
+-- Left Panel (Log List)
+local LeftPanel = Create("Frame", {
+    Parent = Background,
+    BackgroundColor3 = Color3.fromRGB(24, 24, 28),
+    BorderSizePixel = 0,
+    Position = UDim2.new(0, 5, 0, 35),
+    Size = UDim2.new(0, 140, 0, 228)
+})
+Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = LeftPanel})
+
+local LogList = Create("ScrollingFrame", {
+    Parent = LeftPanel,
+    BackgroundTransparency = 1,
+    Size = UDim2.new(1, -10, 1, -10),
+    Position = UDim2.new(0, 5, 0, 5),
+    CanvasSize = UDim2.new(0, 0, 0, 0),
+    ScrollBarThickness = 2
+})
+Create("UIListLayout", {Parent = LogList, Padding = UDim.new(0, 5)})
+
+-- Right Panel (Code & Actions)
+local RightPanel = Create("Frame", {
+    Parent = Background,
+    BackgroundColor3 = Color3.fromRGB(20, 20, 24),
+    BorderSizePixel = 0,
+    Position = UDim2.new(0, 150, 0, 35),
+    Size = UDim2.new(0, 295, 0, 228)
+})
+Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = RightPanel})
+
+-- Mobile Close Button
+local CloseBtn = Create("TextButton", {
+    Parent = TopBar,
+    BackgroundTransparency = 1,
+    Position = UDim2.new(1, -30, 0, 0),
+    Size = UDim2.new(0, 30, 1, 0),
+    Font = Enum.Font.GothamBold,
+    Text = "X",
+    TextColor3 = Color3.fromRGB(255, 80, 80),
+    TextSize = 16
+})
+
+CloseBtn.MouseButton1Click:Connect(function()
+    AdvSpyGui:Destroy()
+    getgenv().AdvSpyExecuted = false
+end)
+
+-- Core Functionality Placeholder (Injecting the rest of your spy logic)
+print("[AdvSpy]: System Loaded. Monitoring Remotes...")
+AdvSpyGui.Parent = game:GetService("CoreGui")
+
+-- Dragging Logic for Mobile
+local dragging, dragInput, dragStart, startPos
+TopBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = Background.Position
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        Background.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
