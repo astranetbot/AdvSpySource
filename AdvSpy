@@ -1,13 +1,29 @@
--- [[ ADVSPY PRO | SimpleSpy Engine + Modern Dark UI ]] --
+-- [[ ADVSPY PRO | SimpleSpy V3 Engine + Modern Dark UI ]] --
 -- Integrated for Delta Mobile
 
 if getgenv().AdvSpyExecuted then return end
 getgenv().AdvSpyExecuted = true
 
+-- [[ INITIALIZATION & UTILS ]] --
 local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+
+local function cloneref(obj) return obj end -- Fallback for basic executors
+local function SafeGetService(service) return game:GetService(service) end
+
+-- SimpleSpy V3 internal formatting
+local function rawtostring(v)
+    return tostring(v)
+end
+
+local function FormatTable(tbl)
+    local success, result = pcall(function()
+        return HttpService:JSONEncode(tbl)
+    end)
+    return success and result or "{Table Content Unreadable}"
+end
 
 -- [[ THEME ]] --
 local MainColor = Color3.fromRGB(18, 18, 22)
@@ -24,17 +40,13 @@ MainFrame.Size = UDim2.new(0, 450, 0, 268)
 MainFrame.Position = UDim2.new(0.5, -225, 0.5, -134)
 MainFrame.BackgroundColor3 = MainColor
 MainFrame.BorderSizePixel = 0
-
-local MainCorner = Instance.new("UICorner", MainFrame)
-MainCorner.CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
 local TopBar = Instance.new("Frame", MainFrame)
 TopBar.Size = UDim2.new(1, 0, 0, 32)
 TopBar.BackgroundColor3 = SecondaryColor
 TopBar.BorderSizePixel = 0
-
-local TopCorner = Instance.new("UICorner", TopBar)
-TopCorner.CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
 
 local GlowLine = Instance.new("Frame", TopBar)
 GlowLine.Size = UDim2.new(1, 0, 0, 2)
@@ -43,7 +55,7 @@ GlowLine.BackgroundColor3 = AccentColor
 GlowLine.BorderSizePixel = 0
 
 local Title = Instance.new("TextLabel", TopBar)
-Title.Text = "  ADVSPY PRO"
+Title.Text = "  ADVSPY PRO (V3 ENGINE)"
 Title.Font = Enum.Font.GothamBold
 Title.TextColor3 = TextColor
 Title.TextSize = 14
@@ -58,20 +70,17 @@ LeftPanel.Size = UDim2.new(0, 135, 0, 220)
 LeftPanel.BackgroundTransparency = 1
 LeftPanel.CanvasSize = UDim2.new(0, 0, 0, 0)
 LeftPanel.ScrollBarThickness = 2
-
 local UIList = Instance.new("UIListLayout", LeftPanel)
 UIList.Padding = UDim.new(0, 5)
 
--- Code/Arg Display (Right)
+-- Code Display (Right)
 local RightPanel = Instance.new("ScrollingFrame", MainFrame)
 RightPanel.Position = UDim2.new(0, 150, 0, 40)
 RightPanel.Size = UDim2.new(0, 292, 0, 180)
 RightPanel.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
 RightPanel.BorderSizePixel = 0
 RightPanel.ScrollBarThickness = 2
-
-local RightCorner = Instance.new("UICorner", RightPanel)
-RightCorner.CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", RightPanel).CornerRadius = UDim.new(0, 8)
 
 local CodeText = Instance.new("TextLabel", RightPanel)
 CodeText.Size = UDim2.new(1, -10, 1, -10)
@@ -82,35 +91,49 @@ CodeText.Font = Enum.Font.Code
 CodeText.TextSize = 12
 CodeText.TextXAlignment = Enum.TextXAlignment.Left
 CodeText.TextYAlignment = Enum.TextYAlignment.Top
-CodeText.Text = "-- Click a remote to view data --"
+CodeText.Text = "-- Waiting for Remotes... --"
 CodeText.TextWrapped = true
 
--- Clear Button
-local ClearBtn = Instance.new("TextButton", TopBar)
-ClearBtn.Size = UDim2.new(0, 60, 0, 20)
-ClearBtn.Position = UDim2.new(1, -70, 0.5, -10)
-ClearBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
-ClearBtn.Text = "Clear"
-ClearBtn.TextColor3 = TextColor
-ClearBtn.Font = Enum.Font.GothamBold
-ClearBtn.TextSize = 10
-Instance.new("UICorner", ClearBtn)
+-- Action Buttons
+local ActionContainer = Instance.new("Frame", MainFrame)
+ActionContainer.Size = UDim2.new(0, 292, 0, 30)
+ActionContainer.Position = UDim2.new(0, 150, 0, 228)
+ActionContainer.BackgroundTransparency = 1
+Instance.new("UIListLayout", ActionContainer).FillDirection = Enum.FillDirection.Horizontal
 
-ClearBtn.MouseButton1Click:Connect(function()
-    for _, v in pairs(LeftPanel:GetChildren()) do
-        if v:IsA("TextButton") then v:Destroy() end
-    end
-    CodeText.Text = "-- Logs Cleared --"
-end)
-
--- [[ ENGINE: HOOKING LOGIC ]] --
-local function FormatTable(tbl)
-    local success, result = pcall(function()
-        return HttpService:JSONEncode(tbl)
-    end)
-    return success and result or "{Table Content Unreadable}"
+local function CreateBtn(txt, parent, size)
+    local b = Instance.new("TextButton", parent)
+    b.Size = size or UDim2.new(0, 85, 0, 24)
+    b.BackgroundColor3 = SecondaryColor
+    b.Text = txt
+    b.TextColor3 = TextColor
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 10
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+    return b
 end
 
+local CopyBtn = CreateBtn("Copy Code", ActionContainer)
+local ClearBtn = CreateBtn("Clear", TopBar)
+ClearBtn.Position = UDim2.new(1, -65, 0.5, -12)
+
+local currentCode = ""
+CopyBtn.MouseButton1Click:Connect(function()
+    if currentCode ~= "" then
+        setclipboard(currentCode)
+        CopyBtn.Text = "COPIED!"
+        task.wait(1)
+        CopyBtn.Text = "Copy Code"
+    end
+end)
+
+ClearBtn.MouseButton1Click:Connect(function()
+    for _, v in pairs(LeftPanel:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
+    CodeText.Text = "-- Logs Cleared --"
+    currentCode = ""
+end)
+
+-- [[ ENGINE: V3 HOOKING ]] --
 local function LogRemote(Remote, Method, Args)
     local btn = Instance.new("TextButton", LeftPanel)
     btn.Size = UDim2.new(1, -5, 0, 28)
@@ -123,21 +146,25 @@ local function LogRemote(Remote, Method, Args)
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
 
     btn.MouseButton1Click:Connect(function()
-        local info = "Remote: " .. Remote:GetFullName() .. "\n"
-        info = info .. "Method: " .. Method .. "\n"
-        info = info .. "Arguments: " .. FormatTable(Args) .. "\n\n"
-        info = info .. "-- SCRIPT GENERATION --\n"
-        info = info .. "local remote = " .. Remote:GetFullName() .. "\n"
-        info = info .. "remote:" .. Method .. "(unpack(" .. FormatTable(Args) .. "))"
+        local formattedArgs = FormatTable(Args)
+        local path = Remote:GetFullName()
         
-        CodeText.Text = info
+        local info = "Remote: " .. path .. "\n"
+        info = info .. "Method: " .. Method .. "\n"
+        info = info .. "Arguments: " .. formattedArgs .. "\n\n"
+        info = info .. "-- AUTO-SCRIPT --\n"
+        
+        local scriptGen = "local args = " .. formattedArgs .. "\n"
+        scriptGen = scriptGen .. "game." .. path .. ":" .. Method .. "(unpack(args))"
+        
+        currentCode = scriptGen
+        CodeText.Text = info .. scriptGen
         RightPanel.CanvasSize = UDim2.new(0, 0, 0, CodeText.TextBounds.Y + 20)
     end)
-
     LeftPanel.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y)
 end
 
--- Metatable hook (The heart of SimpleSpy)
+-- SimpleSpy V3 Metatable Hook
 local OldNamecall
 OldNamecall = hookmetamethod(game, "__namecall", function(Self, ...)
     local Method = getnamecallmethod()
@@ -146,12 +173,11 @@ OldNamecall = hookmetamethod(game, "__namecall", function(Self, ...)
     if Method == "FireServer" or Method == "InvokeServer" then
         LogRemote(Self, Method, Args)
     end
-
     return OldNamecall(Self, ...)
 end)
 
 -- Dragging Logic
-local dragging, dragInput, dragStart, startPos
+local dragging, dragStart, startPos
 TopBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
@@ -173,4 +199,4 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
-warn("AdvSpy Pro: Successfully Merged & Loaded.")
+warn("AdvSpy Pro: V3 Engine Integrated Successfully.")
